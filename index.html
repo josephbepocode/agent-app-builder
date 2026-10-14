@@ -1,0 +1,81 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent Forge | Multi-agent AI app builder in your browser</title>
+<meta name="description" content="Planner, coder and reviewer agents running a local LLM with WebLLM generate and live-preview small web apps.">
+<style>
+:root{--bg:#07070c;--p:#11111b;--l:#25253a;--t:#ececf6;--m:#9494b8;--a:#7c5cff;--b:#22d3ee;--c:#f472b6;--ok:#34d399}
+*{box-sizing:border-box}body{margin:0;font:15px/1.5 Inter,system-ui,sans-serif;background:var(--bg);color:var(--t);min-height:100vh;background-image:radial-gradient(ellipse at 10% -10%,#7c5cff33,transparent 50%),radial-gradient(ellipse at 100% 0,#22d3ee22,transparent 40%)}
+header{padding:22px 28px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--l)}
+h1{margin:0;font-size:1.4rem}h1 i{font-style:normal;background:linear-gradient(90deg,var(--a),var(--b));-webkit-background-clip:text;color:transparent}
+.sub{color:var(--m);font-size:.9rem;margin:2px 0 0}
+main{display:grid;grid-template-columns:minmax(320px,440px) 1fr;gap:18px;padding:20px 28px}
+.card{background:var(--p);border:1px solid var(--l);border-radius:16px;padding:16px}
+textarea,select{width:100%;background:#0a0a12;color:var(--t);border:1px solid var(--l);border-radius:10px;padding:10px;font:inherit}
+textarea{min-height:96px;resize:vertical}label{font-size:.82rem;color:var(--m);display:block;margin:10px 0 4px}
+button{font:inherit;font-weight:600;border:0;border-radius:10px;padding:10px 16px;cursor:pointer;background:linear-gradient(90deg,var(--a),#5b8cff);color:#fff}
+button.sec{background:#1c1c2e;color:var(--t);border:1px solid var(--l)}button:disabled{opacity:.5;cursor:not-allowed}
+:focus-visible{outline:2px solid var(--b);outline-offset:2px}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.chip{font-size:.78rem;padding:4px 10px;border-radius:99px;background:#1c1c2e;border:1px solid var(--l);color:var(--m);cursor:pointer}
+.agents{display:grid;gap:10px;margin-top:14px}.agent{border:1px solid var(--l);border-radius:12px;padding:10px 12px;background:#0b0b14;transition:.3s}
+.agent h3{margin:0;font-size:.9rem;display:flex;align-items:center;gap:8px}.dot{width:9px;height:9px;border-radius:50%;background:#333}
+.agent.run{border-color:var(--a);box-shadow:0 0 0 1px var(--a),0 0 24px #7c5cff44}.agent.run .dot{background:var(--a);animation:p 1s infinite}.agent.done .dot{background:var(--ok)}
+@keyframes p{50%{opacity:.3}}
+.agent pre{white-space:pre-wrap;font:12px/1.45 ui-monospace,Menlo,monospace;color:var(--m);max-height:150px;overflow:auto;margin:6px 0 0}
+.status{font-size:.85rem;color:var(--m);margin-top:10px;min-height:1.3em}.bar{height:6px;border-radius:9px;background:#1c1c2e;overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--a),var(--b));transition:width .3s}
+.right{display:flex;flex-direction:column;gap:12px;min-height:70vh}.tabs{display:flex;gap:6px}.tabs button{padding:6px 12px}.tabs button[aria-selected=false]{background:#1c1c2e;color:var(--m)}
+iframe{flex:1;width:100%;min-height:520px;border:1px solid var(--l);border-radius:14px;background:#fff}
+#code{flex:1;min-height:520px;margin:0;white-space:pre-wrap;overflow:auto;background:#0a0a12;border:1px solid var(--l);border-radius:14px;padding:14px;font:12px/1.5 ui-monospace,monospace;color:#c4c4f0}
+.warn{border:1px solid #f59e0b55;background:#f59e0b14;color:#fcd34d;padding:10px 12px;border-radius:10px;font-size:.85rem;display:none;margin-top:10px}
+footer{color:var(--m);font-size:.8rem;text-align:center;padding:18px}
+@media(max-width:900px){main{grid-template-columns:1fr;padding:14px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style></head><body>
+<header><div><h1><i>Agent Forge</i> · multi-agent app builder</h1><p class="sub">Planner, coder and reviewer agents run a real LLM on your GPU with WebLLM. Nothing leaves your device.</p></div></header>
+<main>
+<section class="card" aria-label="Controls">
+<label for="model">Model (downloaded once, cached by your browser)</label>
+<select id="model"><option value="Qwen2.5-Coder-0.5B-Instruct-q4f16_1-MLC">Qwen2.5 Coder 0.5B (about 400 MB, fastest)</option><option value="Qwen2.5-Coder-1.5B-Instruct-q4f16_1-MLC">Qwen2.5 Coder 1.5B (about 1 GB, better code)</option></select>
+<label for="prompt">Describe the app you want</label>
+<textarea id="prompt">A pomodoro timer with start, pause and reset buttons, a circular progress ring and a dark theme.</textarea>
+<div class="chips" aria-label="Example prompts"><span class="chip" role="button" tabindex="0">Tip calculator with split bill</span><span class="chip" role="button" tabindex="0">Todo list saved to localStorage</span><span class="chip" role="button" tabindex="0">Colour palette generator with copy buttons</span><span class="chip" role="button" tabindex="0">Bouncing balls canvas toy</span></div>
+<div class="btns"><button id="go">Build with agents</button><button class="sec" id="demo">Load sample output</button></div>
+<div class="warn" id="warn" role="alert"></div>
+<div class="status" id="status" aria-live="polite">Idle. Requires a WebGPU browser (Chrome, Edge, or recent Safari).</div><div class="bar" aria-hidden="true"><i id="prog"></i></div>
+<div class="agents">
+<div class="agent" id="a-plan"><h3><span class="dot"></span>Planner</h3><pre>Breaks the request into a spec.</pre></div>
+<div class="agent" id="a-code"><h3><span class="dot"></span>Coder</h3><pre>Writes one self-contained HTML file.</pre></div>
+<div class="agent" id="a-rev"><h3><span class="dot"></span>Reviewer</h3><pre>Checks for bugs and returns a fixed version.</pre></div>
+</div></section>
+<section class="right" aria-label="Output">
+<div class="tabs" role="tablist"><button role="tab" aria-selected="true" id="t1">Live preview</button><button role="tab" aria-selected="false" id="t2">Code</button><button class="sec" id="dl" style="margin-left:auto">Download HTML</button></div>
+<iframe id="frame" title="Generated app preview (sandboxed)" sandbox="allow-scripts"></iframe><pre id="code" hidden></pre>
+</section></main>
+<footer>Built by Deji · Generated code runs in a sandboxed iframe with no access to this page</footer>
+<script type="module">
+const $=id=>document.getElementById(id);let engine=null,loaded='',html='';
+const SAMPLE=`<!doctype html><html><head><style>body{margin:0;height:100vh;display:grid;place-items:center;background:#0f172a;font-family:system-ui;color:#e2e8f0}.w{text-align:center}svg{transform:rotate(-90deg)}circle{fill:none;stroke-width:10}#r{stroke:#7c5cff;stroke-linecap:round;transition:stroke-dashoffset .5s}.t{font-size:48px;font-weight:700;margin-top:-140px;height:140px}button{margin:6px;padding:10px 18px;border:0;border-radius:10px;background:#7c5cff;color:#fff;font-size:16px;cursor:pointer}</style></head><body><div class="w"><svg width="220" height="220"><circle cx="110" cy="110" r="95" stroke="#1e293b"/><circle id="r" cx="110" cy="110" r="95" stroke-dasharray="597" stroke-dashoffset="0"/></svg><div class="t" id="t">25:00</div><button id="s">Start</button><button id="p">Pause</button><button id="x">Reset</button></div><script>let T=1500,l=T,i;const f=()=>{t.textContent=String(l/60|0).padStart(2,'0')+':'+String(l%60).padStart(2,'0');r.style.strokeDashoffset=597*(1-l/T)};s.onclick=()=>{if(!i)i=setInterval(()=>{if(l>0){l--;f()}else clearInterval(i)},1000)};p.onclick=()=>{clearInterval(i);i=null};x.onclick=()=>{p.onclick();l=T;f()};f()<\/script></body></html>`;
+function show(h){html=h;$('frame').srcdoc=h;$('code').textContent=h}
+function st(t,p){$('status').textContent=t;if(p!=null)$('prog').style.width=(p*100)+'%'}
+function agent(id,state,text){const e=$(id);e.className='agent '+state;if(text!=null)e.querySelector('pre').textContent=text}
+function extract(t){const m=t.match(/```(?:html)?\s*([\s\S]*?)```/i);let c=m?m[1]:t;const i=c.search(/<!doctype|<html/i);return i>=0?c.slice(i).trim():c.trim()}
+async function chat(sys,user,id,max=1400){let out='';const s=await engine.chat.completions.create({messages:[{role:'system',content:sys},{role:'user',content:user}],stream:true,temperature:.3,max_tokens:max});
+for await(const c of s){out+=c.choices[0]?.delta?.content||'';$(id).querySelector('pre').textContent=out;$(id).querySelector('pre').scrollTop=1e9}return out}
+async function load(){const m=$('model').value;if(engine&&loaded===m)return;
+if(!navigator.gpu)throw new Error('WebGPU is not available in this browser. Try desktop Chrome or Edge. You can still click "Load sample output".');
+st('Loading WebLLM runtime...',.02);const w=await import('https://esm.run/@mlc-ai/web-llm');
+engine=await w.CreateMLCEngine(m,{initProgressCallback:r=>st(r.text,r.progress)});loaded=m}
+$('go').onclick=async()=>{const req=$('prompt').value.trim();if(!req)return;$('go').disabled=true;$('warn').style.display='none';
+try{await load();
+agent('a-plan','run','');st('Planner is thinking...',1);
+const plan=await chat('You are a senior product planner. Turn the request into a short build spec: features, UI layout, colours, and interactions. Use at most 8 bullet points. No code.',req,'a-plan',350);agent('a-plan','done');
+agent('a-code','run','');st('Coder is writing the app...');
+const code=extract(await chat('You are an expert front-end developer. Output ONE complete self-contained HTML file with inline <style> and <script>. No external libraries, no explanations, just the code in a single ```html block. Make it polished and working.',`Request: ${req}\n\nSpec:\n${plan}`,'a-code',1800));show(code);agent('a-code','done');
+agent('a-rev','run','');st('Reviewer is checking the code...');
+const rev=await chat('You are a strict code reviewer. Find bugs (undefined variables, missing elements, broken event handlers, missing closing tags). First write a short list of issues. Then output the full corrected HTML file in a single ```html block. If there are no issues, write APPROVED and repeat the file.',code,'a-rev',2000);
+const fixed=extract(rev);if(/<html|<body|<script|<div/i.test(fixed)&&fixed.length>code.length*.6)show(fixed);agent('a-rev','done');st('Done. Preview updated with the reviewed version.',1)}
+catch(e){$('warn').textContent=e.message;$('warn').style.display='block';st('Stopped.',0)}finally{$('go').disabled=false}};
+$('demo').onclick=()=>{show(SAMPLE);agent('a-plan','done','Sample: timer, ring progress, three controls, dark slate theme.');agent('a-code','done','Sample output loaded (pre-generated).');agent('a-rev','done','APPROVED');st('Showing sample output.',1)};
+document.querySelectorAll('.chip').forEach(c=>{const f=()=>$('prompt').value=c.textContent;c.onclick=f;c.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();f()}}});
+const tab=a=>{$('t1').setAttribute('aria-selected',a);$('t2').setAttribute('aria-selected',!a);$('frame').hidden=!a;$('code').hidden=a};$('t1').onclick=()=>tab(true);$('t2').onclick=()=>tab(false);
+$('dl').onclick=()=>{if(!html)return;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));a.download='agent-forge-app.html';a.click()};
+show(SAMPLE);
+</script></body></html>
